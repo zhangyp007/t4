@@ -1,0 +1,40 @@
+查看环境情况： 
+npx react-native doctor
+
+1、VPN翻墙
+export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7890
+
+注：创建不成功时，记得清除npm和yarn缓存
+
+2、创建一个项目
+npx @react-native-community/cli@cli版本 init 项目名 --version RN版本
+npx @react-native-community/cli init 指定使用java语言 Android 端的 Java 或 Kotlin
+
+
+码行工具箱 （从基本项目-有导航功能项目中复制配置即可）
+npx @react-native-community/cli@15.1.2 init t1 --version 0.76.3
+npx @react-native-community/cli@15.1.2 init t2 --version 0.76.3
+npx @react-native-community/cli@15.1.2 init t3 --version 0.76.3
+npx @react-native-community/cli@14.0.0 init t4 --version 0.75.4
+
+npx react-native init t4 --version 0.76.3
+npx react-native init t4 --template react-native@0.76.3
+
+@react-native-community/cli	react-native
+^19.0.0	^0.80.0
+^18.0.0	^0.79.0
+^15.0.0	^0.76.0, ^0.77.0, ^0.78.0
+^14.0.0	^0.75.0
+^13.0.0	^0.74.0
+^12.0.0	^0.73.0
+^11.0.0	^0.72.0
+^10.0.0	^0.71.0
+^9.0.0	^0.70.0
+^8.0.0	^0.69.0
+^7.0.0	^0.68.0
+^6.0.0	^0.65.0,^0.66.0,^0.67.0
+^5.0.0	^0.64.0
+^4.0.0	^0.62.0,^0.63.0
+^3.0.0	^0.61.0
+^2.0.0	^0.60.0
+^1.0.0	^0.59.0

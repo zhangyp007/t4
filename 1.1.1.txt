@@ -1,0 +1,167 @@
+/*
+📁 项目结构: VisionCamera Kotlin + Worklets 示例
+*/
+
+// === package.json ===
+{
+  "name": "VisionApp",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "android": "react-native run-android",
+    "start": "react-native start"
+  },
+  "dependencies": {
+    "react": "18.2.0",
+    "react-native": "0.79.2",
+    "react-native-vision-camera": "^3.4.0",
+    "react-native-reanimated": "^3.7.4"
+  },
+  "devDependencies": {
+    "react-native-worklets-core": "git+https://github.com/mrousavy/react-native-worklets-core.git"
+  }
+}
+
+// === App.tsx ===
+import React, { useEffect } from 'react';
+import { View, Text } from 'react-native';
+import { Camera, useCameraDevices, useFrameProcessor } from 'react-native-vision-camera';
+import { runOnJS } from 'react-native-worklets-core';
+
+export default function App() {
+  const devices = useCameraDevices();
+  const device = devices.back;
+
+  useEffect(() => {
+    Camera.requestCameraPermission();
+  }, []);
+
+  const frameProcessor = useFrameProcessor((frame) => {
+    'worklet';
+    // 调用 JNI 插件
+    const result = __my_process_bitmap(frame);
+    runOnJS(console.log)(result);
+  }, []);
+
+  if (device == null) return <Text>Loading camera...</Text>;
+
+  return (
+    <View style={{ flex: 1 }}>
+      <Camera
+        style={{ flex: 1 }}
+        device={device}
+        isActive={true}
+        frameProcessor={frameProcessor}
+        frameProcessorFps={5}
+      />
+    </View>
+  );
+}
+
+// === android/app/src/main/java/com/visionapp/MainApplication.kt ===
+package com.visionapp
+
+import android.app.Application
+import com.facebook.react.PackageList
+import com.facebook.react.ReactApplication
+import com.facebook.react.ReactNativeHost
+import com.facebook.react.ReactPackage
+import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
+import com.facebook.react.defaults.DefaultReactNativeHost
+import com.mrousavy.camera.frameprocessor.FrameProcessorPluginRegistry
+import com.visionapp.MyFrameProcessorPlugin
+
+class MainApplication : Application(), ReactApplication {
+  override val reactNativeHost: ReactNativeHost = object : DefaultReactNativeHost(this) {
+    override fun getUseDeveloperSupport() = true
+    override fun getPackages(): List<ReactPackage> = PackageList(this).packages
+    override fun getJSMainModuleName() = "index"
+  }
+
+  override fun onCreate() {
+    super.onCreate()
+    if (BuildConfig.DEBUG) {
+      com.facebook.flipper.ReactNativeFlipper.initializeFlipper(this, reactNativeHost.reactInstanceManager)
+    }
+    // 注册插件
+    FrameProcessorPluginRegistry.addFrameProcessorPlugin("__my_process_bitmap") { MyFrameProcessorPlugin(it) }
+  }
+}
+
+// === android/app/src/main/java/com/visionapp/MyFrameProcessorPlugin.kt ===
+package com.visionapp
+
+import android.graphics.Bitmap
+import com.mrousavy.camera.frameprocessor.FrameProcessorPlugin
+import com.mrousavy.camera.frameprocessor.Frame
+
+class MyFrameProcessorPlugin(frame: Frame) : FrameProcessorPlugin() {
+  override fun callback(): Any {
+    val bitmap: Bitmap = frame.toBitmap()
+    return "Bitmap: ${bitmap.width}x${bitmap.height}"
+  }
+}
+
+// === android/build.gradle ===
+buildscript {
+  ext.kotlin_version = '1.9.22'
+  dependencies {
+    classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
+  }
+}
+
+allprojects {
+  repositories {
+    google()
+    mavenCentral()
+  }
+}
+
+// === android/app/build.gradle ===
+android {
+  compileSdk 34
+  ndkVersion "26.2.11394342"
+  defaultConfig {
+    minSdk 24
+    targetSdk 34
+    multiDexEnabled true
+  }
+  buildFeatures {
+    prefab true
+  }
+  externalNativeBuild {
+    cmake {
+      path "src/main/cpp/CMakeLists.txt"
+    }
+  }
+}
+
+dependencies {
+  implementation("androidx.multidex:multidex:2.0.1")
+  implementation("com.facebook.react:react-android")
+  implementation("com.mrousavy.camera:camera")
+}
+
+// === android/app/src/main/cpp/CMakeLists.txt ===
+cmake_minimum_required(VERSION 3.22.1)
+project(vision_plugin)
+
+add_library(
+  vision_plugin SHARED
+  VisionPlugin.cpp
+)
+
+find_library(log-lib log)
+target_link_libraries(vision_plugin ${log-lib})
+
+// === android/app/src/main/cpp/VisionPlugin.cpp ===
+#include <jni.h>
+#include <android/log.h>
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_visionapp_MyFrameProcessorPlugin_processBitmap(
+  JNIEnv* env,
+  jobject thiz
+) {
+  return env->NewStringUTF("Hello from JNI!");
+}
